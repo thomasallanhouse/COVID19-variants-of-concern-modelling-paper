@@ -521,3 +521,25 @@ function [weighted_I_UK,weighted_I_VOC] = compute_weighted_force_of_infection(po
     weighted_I_VOC = squeeze(I_VOC_unvacc_first_infection + I_VOC_unvacc_prior_infection +...
                     I_VOC_vacc_first_infection + I_VOC_vacc_prior_infection);
 end
+
+%--------------------------------------------------------------------------
+%% Supporting function for iterating over arbitrary variables
+%--------------------------------------------------------------------------
+function changed_parameters = set_parameters(plot_over_x_name,plot_over_x,iterate_x,changed_parameters)
+if strcmp(plot_over_x_name,'VOC_rel_trans_over')
+    changed_parameters.VOC_vs_UK = plot_over_x(iterate_x);
+elseif strcmp(plot_over_x_name,'relative_suscept_over')
+    % - Vaccine efficacy scaling
+    changed_parameters.e_aVOC_scaling =  plot_over_x(iterate_x);
+    changed_parameters.e_pVOC_scaling =  plot_over_x(iterate_x);
+    
+    % - Cross-immunity
+    changed_parameters.s_VOC = 1- plot_over_x(iterate_x); % susceptibility to VOC for resident variant recovereds
+    changed_parameters.s_UK = 1- plot_over_x(iterate_x); % susceptibility to resident variants for VOC recovereds
+elseif strcmp(plot_over_x_name,'new_vaccine_intro_date_over')
+    parameters = make_parameters();
+    changed_parameters.vaccine_changeover_week = floor((plot_over_x(iterate_x) - parameters.date1)/7);
+    changed_parameters.prioritise_unvaccinated = 4; % prioritise unvaccinated, then either AZ or P 
+    % changed_parameters.prioritise_unvaccinated = 5; % prioritise vaccinated, then unvaccinated group. 
+end
+end

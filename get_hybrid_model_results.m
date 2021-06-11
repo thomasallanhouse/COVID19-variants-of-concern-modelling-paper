@@ -77,7 +77,7 @@ end
 %% Parsimonious model runs using stochastic initial conditions
 %--------------------------------------------------------------------------
 % Load initial conditions from file
-load('MAT_files/gillespie_model_varying_all4_24_05_21.mat')
+load('MAT_files/gillespie_model_varying_all4.mat')
 
 % Decide what to change
 Tidx = 1; Eidx = 2:9; Iidx = 10:17; % Indices of time columns, E columns (8 TaB), and I columns (8 TaB)

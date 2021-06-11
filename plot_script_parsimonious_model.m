@@ -5,6 +5,11 @@
 clear
 set(0,'defaultfigurecolor',[1 1 1])
 
+%% check if the folder for saving figures exists, and if not then create it
+if ~exist('saved_figs','dir')
+    mkdir saved_figs
+end
+
 %% Add required directories to path
 addpath('cbrewer/') % Colour maps
 
@@ -950,7 +955,7 @@ function temporal_infectious_plots(outputs,...
 
             % Append vaccination bar data descriptor to legend
             bar_colour = rgba2rgb([1 1 1],[0 0 0.8 0.3]);
-            bar(NaN,NaN,...
+            bar(NaT,NaN,...
                             'FaceColor',bar_colour,...
                             'EdgeColor',bar_colour,...
                             'LineWidth',0.01,...
@@ -1030,10 +1035,10 @@ function add_vaccination_data_same_panel(x_axis_dates,...
     text(datenum(2021,5,17)+3-datenum(x_axis_dates(1)),y_text_pos,{'Step 3';'R_{excl} = 2.41'},'Rotation',0,'HorizontalAlignment','Left','VerticalAlignment','Top','FontSize',fig_fontsize);
 
     % Add STEP 4 date line
-    plot(datenum(2021,6,21)-datenum(x_axis_dates(1))+[0 0],[0 105],'-',...
+    plot(datetime(2021,6,21)+[0 0],[0 105],'-',...
             'Color',[0.5 0.5 0.5],...
             'LineWidth',1);
-    text(datenum(2021,6,21)+3-datenum(x_axis_dates(1)),y_text_pos,{'Step 4';'R_{excl} = 3.51'},'Rotation',0,'HorizontalAlignment','Left','VerticalAlignment','Top','FontSize',fig_fontsize);
+    text(datetime(2021,6,21)+3,y_text_pos,{'Step 4';'R_{excl} = 3.51'},'Rotation',0,'HorizontalAlignment','Left','VerticalAlignment','Top','FontSize',fig_fontsize);
 end
 
 
@@ -1567,4 +1572,9 @@ function add_to_scatter_plot(x_data,y_data,sz,colour_vec,marker_type)
                 colour_vec,...
                 'Marker',marker_type)
     end    
+end
+
+% If you have the file_exchange function export_fig, then comment this out
+function export_fig(savename,format,renderer,resolution)
+exportgraphics(gcf,[savename,'.',format(2:end)])%,'resolution',resolution(2:end))
 end
