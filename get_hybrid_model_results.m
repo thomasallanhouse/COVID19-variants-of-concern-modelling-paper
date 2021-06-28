@@ -152,7 +152,7 @@ for iterate_x = 1:length(plot_over_x)
                     parameters = make_parameters(changed_parameters);
                     
                     % run the simple model
-                    [t,pop_out_gillespie,parameters_out_gillespie,outputs_gillespie] = run_simple_vaccines_V2_mex(parameters);
+                    [t,pop_out_gillespie,parameters_out_gillespie,outputs_gillespie] = run_simple_vaccines_mex(parameters);
                     
                     % find outputs
                     [epidemic_size_gillespie(iterate_x,iterate_y,iterate_z,intro_itr,:),...
@@ -173,3 +173,58 @@ end
 %                          'plot_over_y_name',...
 %                          'plot_over_z',...
 %                          'plot_over_z_name')
+
+%--------------------------------------------------------------------------
+%% SUPPORTING FUNCTIONS %%
+%--------------------------------------------------------------------------                                   
+
+% Compute epidemic size, peak size and timing of the peak.
+function [epidemic_size,peak_height,peak_time] = process_outputs(parameters,outputs,pop_out)
+    
+    % Get field names in parameter structure
+    % Assign each field entry to its own separate variable
+    names = fieldnames(parameters);
+    for i=1:length(names)
+        eval([cell2mat(names(i)),' = parameters.',cell2mat(names(i)),';']);
+    end
+    
+    % Get field names in outputs structure
+    % Assign each field entry to its own separate variable
+    names = fieldnames(outputs);
+    for i=1:length(names)
+        eval([cell2mat(names(i)),' = outputs.',cell2mat(names(i)),';']);
+    end
+    
+    % Get peaks in prevalence pk_H_XXX (and the timing, pk_t_XXX)
+    % for resident variant, VOC & both variants summed
+    [pk_H_UK,pk_t_UK] = max(I_UK);
+    [pk_H_VOC,pk_t_VOC] = max(I_VOC);
+    [pk_H_both,pk_t_both] = max(I_UK+I_VOC);
+    
+    % Assign prevalence summary statistics to output variables
+    peak_time = [dates(pk_t_UK),dates(pk_t_VOC),dates(pk_t_both)];
+    peak_height = [pk_H_UK,pk_H_VOC,pk_H_both];
+    epidemic_size = [sum(pop_out(4,:,:,end),'all'),sum(pop_out(:,4,:,end),'all'),sum(pop_out(4,:,:,end),'all')+sum(pop_out(:,4,:,end),'all')];
+end
+
+%--------------------------------------------------------------------------
+%% Supporting function for iterating over arbitrary variables
+%--------------------------------------------------------------------------
+function changed_parameters = set_parameters(plot_over_x_name,plot_over_x,iterate_x,changed_parameters)
+if strcmp(plot_over_x_name,'VOC_rel_trans_over')
+    changed_parameters.VOC_vs_UK = plot_over_x(iterate_x);
+elseif strcmp(plot_over_x_name,'relative_suscept_over')
+    % - Vaccine efficacy scaling
+    changed_parameters.e_aVOC_scaling =  plot_over_x(iterate_x);
+    changed_parameters.e_pVOC_scaling =  plot_over_x(iterate_x);
+    
+    % - Cross-immunity
+    changed_parameters.s_VOC = 1- plot_over_x(iterate_x); % susceptibility to VOC for resident variant recovereds
+    changed_parameters.s_UK = 1- plot_over_x(iterate_x); % susceptibility to resident variants for VOC recovereds
+elseif strcmp(plot_over_x_name,'new_vaccine_intro_date_over')
+    parameters = make_parameters();
+    changed_parameters.vaccine_changeover_week = floor((plot_over_x(iterate_x) - parameters.date1)/7);
+    changed_parameters.prioritise_unvaccinated = 4; % prioritise unvaccinated, then either AZ or P 
+    % changed_parameters.prioritise_unvaccinated = 5; % prioritise vaccinated, then unvaccinated group. 
+end
+end
