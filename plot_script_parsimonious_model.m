@@ -32,8 +32,8 @@ line_colours_VOC_AtoC = [0    0.4470    0.7410;
 line_colours_VOC_DtoE = [0.8500    0.3250    0.0980;
                         0.4940    0.1840    0.5560;
                         0.4660    0.6740    0.1880;
-                        0 0 0];
-
+                        0 0 0];                
+                    
 line_colours_new_vacc = [1 0 0;
                          1 0 0;
                          1 0 0;
@@ -73,14 +73,14 @@ load('MAT_files/parsimonious_model_results.mat')
 %--------------------------------------------------------------------------
 %% VOC SCENARIO RUNS.
 %% Temporal infectious prevalence with resident variants in absence of VOCs also displayed 
-%% Figures 1(a), S2(a), S3
+%% Figures 1(a), S5(a), S6
 %--------------------------------------------------------------------------
 
 % Get default parameter set. To be used in plotting function.
 parameters = make_parameters();
 
 %%% Figure including VOC MT, VOC E, VOC LT+E %%%
-%%% Figures 1(a) & S3(a)
+%%% Figures 1(a) & S5(a)
 
 % Set up input data
 UK_input_data = [I_UK_default_runs(:,1:3,1) I_UK_no_VOC];
@@ -129,7 +129,7 @@ temporal_infectious_plots(outputs_default_runs,...
                           add_vaccination_data_flag)
 
 %%% Figure including VOC Ev & VOC Ei %%%
-%%% Figures S2(a) & S3(b)
+%%% Figures S5(a) & S6(b)
 
 % Set up input data
 UK_input_data_batch_two = [I_UK_default_runs(:,[2 4:5],1) I_UK_no_VOC];
@@ -180,7 +180,7 @@ temporal_infectious_plots(outputs_default_runs,...
                       
 %--------------------------------------------------------------------------
 %% VOC SCENARIO RUNS. R with immunity
-%% Figures 1(c), S2(b)
+%% Figures 1(c), S5(b)
 %--------------------------------------------------------------------------                       
                       
 %% Figure for VOCs MT, E, LT+E, Figure 1(c) %%%
@@ -206,7 +206,7 @@ temporal_R_with_immunity_plots(no_VOC_outputs,...
                           vacc_coverage_data,...
                           add_vaccination_data_flag) 
 
-%% Figure for VOCs Ei, Ev, Figure 2(b) %%%
+%% Figure for VOCs Ei, Ev, Figure S5(b) %%%
 % Set figure plot inputs
 save_filename =  'saved_figs/R_with_immunity_VOCs_extra';
 fig_fontsize = 22;
@@ -459,7 +459,7 @@ end
                         
 %--------------------------------------------------------------------------
 %% SENSITIVITY TO INTRODUCTION DATE CLOUD PLOTS %%
-%% Figure S4
+%% Figure S7
 %--------------------------------------------------------------------------
  
 %%% Cloud plots comparing infections, peak time and peak height %%%
@@ -488,7 +488,7 @@ generate_summary_measure_cloud_plots(epidemic_size_default_runs(:,1:3,:),...
                                 
 %--------------------------------------------------------------------------
 %% Heatmaps of effective R as transmission and immune escape varies
-%% Figure S5
+%% Figure S8
 %--------------------------------------------------------------------------
 
 % Made as snapshots in time for different calendar dates.
@@ -615,7 +615,7 @@ end
 
 %--------------------------------------------------------------------------
 %% TRANSMISSION BLOCKING SENSITIVITY RUNS  %%
-%% Figures S6 & S7
+%% Figures S9 & S10
 %--------------------------------------------------------------------------
 
 % Get default parameter set. To be used in plotting function.
@@ -632,7 +632,7 @@ s_varies =         [1   0.75 0.75]; % Natural immunity efficacy
 n_VOCs = numel(VOC_vs_UK_varies);
 
 %% Generate temporal plots
-%% Figure S6
+%% Figure S9
 
 % Set figure plot inputs
 leg_labels = {'VOC MT','VOC E','VOC LT+E','Resident variants with no VOCs','January 2021 peak prevalence'};
@@ -687,7 +687,7 @@ for jj = 2:n_transmission_blocking_vals
 end
 
 %% Generate side-by-side effective R plots for each variant
-%% Figure S7
+%% Figure S10
 
 % Array for colours to be used in plot
 line_colours = [0    0.4470    0.7410;
@@ -872,10 +872,21 @@ function temporal_infectious_plots(outputs,...
 
         % Add profiles to figure for each VOC
         for VOC_itr = 1:size(y,2)
+            
+            % Set colour for line
+            if fig_itr == 1
+                % Resident variants
+                line_colour_vec = [0 0 0];
+            else
+                % VOC
+                line_colour_vec = line_colours(VOC_itr,:);
+            end
+
+            % Add line profile for VOC
             plot(x,...
                     y(:,VOC_itr),...        
                     line_type{VOC_itr},...
-                    'Color',line_colours(VOC_itr,:),...
+                    'Color',line_colour_vec,...
                     'LineWidth',line_width(VOC_itr),...
                     'Marker',glyph_markertypes{VOC_itr},...
                     'MarkerSize',12,...
