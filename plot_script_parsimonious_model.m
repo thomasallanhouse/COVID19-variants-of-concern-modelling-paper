@@ -127,9 +127,9 @@ temporal_infectious_plots(outputs_default_runs,...
                           add_multiple_trace_flag,...
                           vacc_coverage_data,...
                           add_vaccination_data_flag)
-                      
-%%% Figures show proportion of cases that are VOCs %%%
-%%% Figures S12(a) and S12(b) %%%
+%%                      
+%%% Figures show percentage of cases that are VOCs %%%
+%%% Figures S7(a) and S7(b) %%%
 
 % Set up input data
 UK_input_data = I_UK_default_runs(:,:,1);
@@ -140,6 +140,12 @@ leg_labels = {'VOC MT','VOC E','VOC LT+E','VOC Ev','VOC Ei'};
 leg_pos = [0.657 0.725 0.227 0.147];
 save_filename =  'saved_figs/Temporal_proportion_plot';
 fig_fontsize = 22;
+
+% Specify if vaccination data should also be displayed
+add_vaccination_data_flag = true;
+
+% Specify if legend should be included
+leg_flag = true;
 
 % Generate figure
 temporal_proportion_plots(outputs_default_runs,...
@@ -158,7 +164,7 @@ temporal_proportion_plots(outputs_default_runs,...
                           fig_fontsize,...
                           vacc_coverage_data,...
                           add_vaccination_data_flag)
-                      
+%%                      
 %%% Figure including VOC Ev & VOC Ei %%%
 %%% Figures S5(a) & S6(b)
 
