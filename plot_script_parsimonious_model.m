@@ -375,7 +375,8 @@ make_heatmap_plot_new_vacc(matrix_to_plot,...
 
 %%
 %--------------------------------------------------------------------------
-%% NEW VACCINE VOC SUMMARY STAT HEATMAPS - RUNS E (FIGURE 3B-D) %%
+%% NEW VACCINE VOC SUMMARY STAT HEATMAPS - RUNS E (FIGURE 3B-D)      %%
+%% Previously vaccinated prioritised to receive VOC-targeted vaccine %%
 %--------------------------------------------------------------------------
 
 %  Epidemic size VOC, peak height VOC & peak time VOC
@@ -493,10 +494,132 @@ for itr = 2:2
         CT_map,...
         save_filename)
 end                        
-                        
+
+%%
+%--------------------------------------------------------------------------
+%% NEW VACCINE VOC SUMMARY STAT HEATMAPS - RUNS E (FIGURE S13)      %%
+%% Previously vaccinated prioritised to receive VOC-targeted vaccine %%
+%--------------------------------------------------------------------------
+
+%  Epidemic size VOC, peak height VOC & peak time VOC
+
+% Load data file
+load('MAT_files/VOC_E_runs_vacc_priority_4')
+
+% Set plot inputs
+z_value = 1;
+label_fontsize = 26;
+flip_yaxis_flag = true;
+y_vals_is_date_type = true;
+
+% Set up axes labels
+plot_over_x_name = 'Effective imports per day';
+plot_over_z_name = 'Date VOC targeted vaccine introduced';
+
+% Set colourbar ranges
+% Row 1: Minimum; Row 2: Maximum
+% Column for each summary statistics: Size, peak height, peak time
+% Slice for resident variants, VOC, both
+cbar_ranges = zeros(2,3,3);
+cbar_ranges(:,:,1) = [40 0.5 datenum(2021,8,1);
+                      50 1 datenum(2022,1,1)];
+
+cbar_ranges(:,:,2) = [0 0 datenum(2021,6,1);
+                      50 2.0 datenum(2022,5,1)];  
+                  
+cbar_ranges(:,:,3) = [80 0.95 datenum(2021,8,1);
+                      85.5 2.4 datenum(2022,1,1)];
+
+% Set up colourmap
+CT_map = cbrewer('seq', 'Greens', 128);
+
+% Set save filenames
+save_filename_prefix = 'saved_figs/';
+save_filename_variant_type = {'resident_variants_run_E_vacc_priority_4',...
+                              'VOC_run_E_vacc_priority_4',...
+                              'both_run_E_vacc_priority_4'};
+
+% Produce plots
+for itr = 2:2
+    % plot epidemic size
+    title_string = 'Attack rate';
+    if itr==1
+        title_string = [title_string,' resident variants (% of population)'];
+    elseif itr==2
+        title_string = [title_string,' VOC (% of population)'];
+    else
+        title_string = [title_string,' both (% of population)'];
+    end
+    cbar_type = 3;
+    save_filename = [save_filename_prefix 'epidemic_size_' save_filename_variant_type{itr} '_26May2021'];
+    make_heatmap_plot_new_vacc(squeeze(median(epidemic_size_gillespie(6:end,z_value,:,:,itr),4)*100)',...
+        plot_over_x(6:end),...
+        plot_over_z,...
+        label_fontsize,...
+        plot_over_x_name,...
+        plot_over_z_name,...
+        title_string,...
+        flip_yaxis_flag,...
+        y_vals_is_date_type,...
+        cbar_type,...
+        cbar_ranges(:,1,itr),...
+        CT_map,...
+        save_filename)
+    
+    % plot peak height
+    title_string = 'Peak in infectious prevalence for';
+    if itr==1
+        title_string = [title_string,' resident variants (% of population)'];
+    elseif itr==2
+        title_string = [title_string,' VOC (% of population)'];
+    else
+        title_string = [title_string,' both (% of population)'];
+    end
+    cbar_type = 3;
+    save_filename = [save_filename_prefix 'peak_height_' save_filename_variant_type{itr} '_26May2021'];
+    make_heatmap_plot_new_vacc(squeeze(median(peak_height_gillespie(6:end,z_value,:,:,itr),4)*100)',...
+        plot_over_x(6:end),...
+        plot_over_z,...
+        label_fontsize,...
+        plot_over_x_name,...
+        plot_over_z_name,...
+        title_string,...
+        flip_yaxis_flag,...
+        y_vals_is_date_type,...
+        cbar_type,...
+        cbar_ranges(:,2,itr),...
+        CT_map,...
+        save_filename)
+    
+    % plot peak time
+    title_string = 'Time of infectious prevalence peak for';
+    if itr==1
+        title_string = [title_string,' resident variants'];
+    elseif itr==2
+        title_string = [title_string,' VOC'];
+    else
+        title_string = [title_string,' both'];
+    end
+    cbar_type = 2;
+    save_filename = [save_filename_prefix 'peak_time_' save_filename_variant_type{itr} '_26May2021'];
+    make_heatmap_plot_new_vacc(squeeze(median(datenum(peak_time_gillespie(6:end,z_value,:,:,itr)),4))',...
+        plot_over_x(6:end),...
+        plot_over_z,...
+        label_fontsize,...
+        plot_over_x_name,...
+        plot_over_z_name,...
+        title_string,...
+        flip_yaxis_flag,...
+        y_vals_is_date_type,...
+        cbar_type,...
+        cbar_ranges(:,3,itr),...
+        CT_map,...
+        save_filename)
+end           
+
 %--------------------------------------------------------------------------
 %% SENSITIVITY TO INTRODUCTION DATE CLOUD PLOTS %%
-%% Figure S7
+%% Figure S8
 %--------------------------------------------------------------------------
  
 %%% Cloud plots comparing infections, peak time and peak height %%%
@@ -525,9 +648,10 @@ generate_summary_measure_cloud_plots(epidemic_size_default_runs(:,1:3,:),...
                                 
 %--------------------------------------------------------------------------
 %% Heatmaps of effective R as transmission and immune escape varies
-%% Figure S8
+%% Figure S9
 %--------------------------------------------------------------------------
 
+% Construct single panel heatmaps for relative effective R > 1 & R_VOC > 1
 % Made as snapshots in time for different calendar dates.
 % Date for seeding initial VOC infecteds & time snapshots to compute
 % relative R
@@ -540,6 +664,86 @@ VOC_vs_UK_varies = 0.5:0.1:1.5;
 % Vaccine efficacy varied
 VOC_efficacy_scaling = 0.5:0.05:1;
 
+% Store outputs & labels in cells for use in plotting
+save_filename_suffix = {'rel_eff_R','eff_R_VOC','eff_R_resident_variants','rel_eff_R_threshold'};
+
+% Set plot properties
+tick_label_fontsize = 22;
+label_fontsize = 22;
+
+% Get relevant data from cell store variable
+R_eff_heatmap = effective_R_data{4};
+
+% Populate each panel
+for panel_idx = 1:numel(t_snapshots)
+
+    % Initialise the figure
+    position = [10, 10, 1.2*550, 1.2*450];
+    set(0, 'DefaultFigurePosition', position);
+    fig = figure(panel_idx);
+    clf;
+    set(fig,'Color', [1 1 1])
+    hold on
+
+    % Produce the heatmap
+    imagesc(VOC_vs_UK_varies,VOC_efficacy_scaling,R_eff_heatmap(:,:,panel_idx));
+    set(gca,'YDir','normal'); % Reinvert y-axis
+    
+    % Axis tick labels
+    xticks(VOC_vs_UK_varies); xticklabels(VOC_vs_UK_varies);
+    yticks(VOC_efficacy_scaling(1:1:end));
+    yticklabels(VOC_efficacy_scaling(1:1:end));
+    
+    % Set title
+    title(['Date: ', datestr(t_snapshots(panel_idx))]);
+    
+    % Add axis labels if required
+    xlabel('Transmissibility of VOC vs resident variants','FontSize',label_fontsize)
+    ylabel('Proportional efficacy against VOC','FontSize',label_fontsize)
+    
+    % Plot properties
+    set(gca,'FontSize',tick_label_fontsize);
+    
+    % Set ticklabel properties
+    ytickformat('%.2f')
+    xtickformat('%.1f')
+    
+    % Add letters
+    glyph_pos = [11,11;
+        6,6;
+        4,6];
+    glyph_size = 18;
+    glyph_markertypes = {'MT','E','LT+E'};
+    glyph_colour = [1 0 0];
+    if glyph_flag == true
+        add_glyph_fn(glyph_pos,glyph_markertypes,glyph_colour,glyph_size,...
+            VOC_vs_UK_varies,... % xticks values
+            VOC_efficacy_scaling(1:1:end)) %yticks values
+    end
+    
+    % Set colourmap
+    colormap([1 1 1;
+            0 0 0])
+        
+    % Set axes limits
+    xlim([0.48 1.52])
+    ylim([0.48 1.02])
+
+    % Set figure properties
+    % axis image
+    box on
+        
+    % save figure
+    if save_figs_flag == true
+        save_filename = ['saved_figs/relative_R/heatmap_', save_filename_suffix{4},'_panel_idx_' num2str(panel_idx)];
+        export_fig(save_filename,'-pdf','-painters','-r1200')
+    end
+end
+
+%--------------------------------------------------------------------------
+%% Heatmaps of effective R as transmission and immune escape varies
+%% Extra figures
+%--------------------------------------------------------------------------
 % Construct array of heatmaps for 
 % (i) relative effective R
 % (ii) R_VOC
@@ -551,8 +755,8 @@ colourbar_label = {'Relative effective R (R_{eff}^{VOC}/R_{eff}^{res})','VOC eff
 save_filename_suffix = {'rel_eff_R','eff_R_VOC','eff_R_resident_variants','rel_eff_R_threshold'};
 
 % Set plot properties
-tick_label_fontsize = 18;
-label_fontsize = 18;
+tick_label_fontsize = 22;
+label_fontsize = 22;
 
 % Constuct the heatmaps
 for fig_itr = 1:4
@@ -652,7 +856,7 @@ end
 
 %--------------------------------------------------------------------------
 %% TRANSMISSION BLOCKING SENSITIVITY RUNS  %%
-%% Figures S9 & S10
+%% Figures S10 & S11
 %--------------------------------------------------------------------------
 
 % Get default parameter set. To be used in plotting function.
@@ -669,7 +873,7 @@ s_varies =         [1   0.75 0.75]; % Natural immunity efficacy
 n_VOCs = numel(VOC_vs_UK_varies);
 
 %% Generate temporal plots
-%% Figure S9
+%% Figure S10
 
 % Set figure plot inputs
 leg_labels = {'VOC MT','VOC E','VOC LT+E','Resident variants with no VOCs','January 2021 peak prevalence'};
@@ -724,7 +928,7 @@ for jj = 2:n_transmission_blocking_vals
 end
 
 %% Generate side-by-side effective R plots for each variant
-%% Figure S10
+%% Figure S11
 
 % Array for colours to be used in plot
 line_colours = [0    0.4470    0.7410;
@@ -1296,12 +1500,9 @@ function add_glyph_fn(glyph_pos,glyph_markertypes,glyph_colour,glyph_size,xticks
     
     % Get spacing between each xtick and ytick data entry
     x_resolution = xticks_vals(2) - xticks_vals(1);
-    y_resolution = yticks_vals(2) - yticks_vals(1);
     
     % Set offset for text placement
-    x_offset = [x_resolution/3 x_resolution/6 x_resolution*(3/5)];
-    % x_offset = [x_resolution/4 x_resolution/8 x_resolution*(1/2)];
-    % x_offset = x_resolution/8;
+    x_offset = [x_resolution/3 x_resolution/6 (x_resolution*(3/5) - 0.012)];
     y_offset = 0;
 
     % Default is the four corners of the heatmap
