@@ -940,6 +940,9 @@ line_colours = [0    0.4470    0.7410;
 line_type = {'-','-','-'};
 line_width = [2 2 2];
 
+% CHANGE BY TH 26 MARCH 2024
+glyph_markertypes = {'s','+','o','v','*'};
+
 % Get timestep index to plot from for VOC
 VOC_introduced_timestep_idx = (parameters.VOC_imp_date - parameters.date1) + 1;
 
