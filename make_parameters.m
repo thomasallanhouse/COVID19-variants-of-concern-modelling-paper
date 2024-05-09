@@ -46,8 +46,8 @@ parameters.propn_transmission_priorinf = 1; % transmission blocking impact durin
                                      % another variant (proportion of transmission remaining)
 
 %% set how relaxation happens
-parameters.change_days = [datenum(2021,3,29),datenum(2021,4,12),datenum(2021,5,17),datenum(2021,6,21)]-parameters.date1;
-parameters.R_changes_UK_without_immunity = [1.29,1.66,1.88,2.41,3.51];
+parameters.change_days = [datenum(2021,3,29)]; %[datenum(2021,3,29),datenum(2021,4,12),datenum(2021,5,17),datenum(2021,6,21)]-parameters.date1;
+parameters.R_changes_UK_without_immunity = 3.51; %[1.29,1.66,1.88,2.41,3.51];
 parameters.beta_UK_changes = parameters.gam*parameters.R_changes_UK_without_immunity;
 parameters.beta_VOC_changes = parameters.gam*parameters.R_changes_UK_without_immunity*VOC_vs_UK;
 
