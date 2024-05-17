@@ -15,40 +15,42 @@ gam = parameters.gam;   % Recovery rate
 prop_recovered_UK = parameters.prop_recovered_UK; % Initialise proportion previously infected by resident variants
 
 %% set initial condition
-prop_vacc_AZ = 0.355; % English vacc prop as of date1
-prop_vacc_P = 0.185; % English vacc prop as of date1
-prop_infected_initial = 0.0009; % Initial estimated prevalence at date1
+% if sum(IC,'all')==0
+    prop_vacc_AZ = 0.355; % English vacc prop as of date1
+    prop_vacc_P = 0.185; % English vacc prop as of date1
+    prop_infected_initial = 0.0009; % Initial estimated prevalence at date1
 
-% UK VOC V
-% S  S  0
-% E  E  VA
-% I  I  VP
-% R  R  VN
-% so e.g. IC(3,4,4) are people who are infected with UK resident variants, recovered from VOC and vaccinated with new vaccine
-IC = zeros(4,4,4);
-prop_infected_VOC = 0;
-IC(1,1,1) = 1 - prop_infected_initial - prop_recovered_UK - prop_infected_VOC;
-IC(2,1,1) = prop_infected_initial/2;
-IC(3,1,1) = prop_infected_initial/2;
-IC(4,1,1) = prop_recovered_UK;
-IC(1,2,1) = prop_infected_VOC;
+    % UK VOC V
+    % S  S  0
+    % E  E  VA
+    % I  I  VP
+    % R  R  VN
+    % so e.g. IC(3,4,4) are people who are infected with UK resident variants, recovered from VOC and vaccinated with new vaccine
+    IC = zeros(4,4,4);
+    prop_infected_VOC = 0;
+    IC(1,1,1) = 1 - prop_infected_initial - prop_recovered_UK - prop_infected_VOC;
+    IC(2,1,1) = prop_infected_initial/2;
+    IC(3,1,1) = prop_infected_initial/2;
+    IC(4,1,1) = prop_recovered_UK;
+    IC(1,2,1) = prop_infected_VOC;
 
-% assume we vaccinate only susceptibles and recovereds
-num_vacc_AZ = prop_vacc_AZ*IC(1,1,1);
-num_vacc_P = prop_vacc_P*IC(1,1,1);
-IC(1,1,2) = IC(1,1,2) + num_vacc_AZ;
-IC(1,1,1) = IC(1,1,1) - num_vacc_AZ;
+    % assume we vaccinate only susceptibles and recovereds
+    num_vacc_AZ = prop_vacc_AZ*IC(1,1,1);
+    num_vacc_P = prop_vacc_P*IC(1,1,1);
+    IC(1,1,2) = IC(1,1,2) + num_vacc_AZ;
+    IC(1,1,1) = IC(1,1,1) - num_vacc_AZ;
 
-IC(1,1,3) = IC(1,1,3) + num_vacc_P;
-IC(1,1,1) = IC(1,1,1) - num_vacc_P;
+    IC(1,1,3) = IC(1,1,3) + num_vacc_P;
+    IC(1,1,1) = IC(1,1,1) - num_vacc_P;
 
-num_vacc_AZ = prop_vacc_AZ*IC(4,1,1);
-num_vacc_P = prop_vacc_P*IC(4,1,1);
-IC(4,1,2) = IC(4,1,2) + num_vacc_AZ;
-IC(4,1,1) = IC(4,1,1) - num_vacc_AZ;
+    num_vacc_AZ = prop_vacc_AZ*IC(4,1,1);
+    num_vacc_P = prop_vacc_P*IC(4,1,1);
+    IC(4,1,2) = IC(4,1,2) + num_vacc_AZ;
+    IC(4,1,1) = IC(4,1,1) - num_vacc_AZ;
 
-IC(4,1,3) = IC(4,1,3) + num_vacc_P;
-IC(4,1,1) = IC(4,1,1) - num_vacc_P;
+    IC(4,1,3) = IC(4,1,3) + num_vacc_P;
+    IC(4,1,1) = IC(4,1,1) - num_vacc_P;
+% end
 InitialCondition = reshape_pop(IC);
 
 % Set options for ODE solver

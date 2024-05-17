@@ -5,8 +5,6 @@
 % Changelog
 % put change_days and R_changes_UK_without_immunity to single values so we
 % don't have a relaxation roadmap
-
-
 clear
 
 %% Set global flag variables
@@ -21,84 +19,136 @@ if make_mex_flag == true
     codegen run_simple_vaccines -args {parameters}
 end
 
-%--------------------------------------------------------------------------
-%% NO VOC RUN %%
-%--------------------------------------------------------------------------
-
+%% Run the model with a VOC introduction date after the resident wave has finished
+% to get the immunity profile for the Jupyter program, and then something
+% to compare to after that
 VOC_introduction_date = 200;
 
-% run the model with no VOC, to get the immunity profile for the Jupyter
-% program
 clear changed_parameters
-% changed_parameters.VOC_imp_size = 0;
-changed_parameters.s_VOC = 0.6; % susceptibility to VOC variant for UK recovereds
-changed_parameters.VOC_imp_date = 738293+VOC_introduction_date;
+% changed_parameters.s_VOC = 0.6; % susceptibility to VOC variant for UK recovereds
+changed_parameters.VOC_imp_date = datenum(2021,5,17)+VOC_introduction_date;
+changed_parameters.s_VOC = 0.6; % susceptibility of unvaccinated, previously-infected, against the new strain
+changed_parameters.e_pVOC = 0.4; % (or e_aVOC) susceptibility of vaccinated, not previously infected, against the new strain
+changed_parameters.e_aVOC = 0.4;
 % changed_parameters.VOC_imp_size = 10;
 % changed_parameters.e_pVOC_scaling = 0; % efficacy of Pfizer vaccine for VOC variant, proportional scaling of resident variants
 
-
-
 parameters = make_parameters(changed_parameters);
-[t,no_VOC_pop_out,no_VOC_parameters,no_VOC_outputs] = run_simple_vaccines_mex(parameters);
+% parameters.e_aVOC = parameters.e_pVOC; % Make the vaccine efficacies the same, for simplicity
+% this gives the fully population output: for_jupyter_pop_out(UK,VOC,Vaccine)
+% so e.g. for_jupyter_outputs(3,4,4) are people who are infected with UK resident variants, recovered from VOC and vaccinated with new vaccine
+% it also saves the inputted parameters and for_jupyter_outputs for ease of plotting
+[t,for_jupyter_pop_out,for_jupyter_parameters,for_jupyter_outputs] = run_simple_vaccines_mex(parameters);
 
-figure; plot(t,no_VOC_outputs.I_UK)
-hold on; plot(t,no_VOC_outputs.I_VOC)
-% no_VOC_pop_out is no_VOC_pop_out(i,j,k)
-% UK VOC V
-% S  S  0
-% E  E  VA
-% I  I  VP
-% R  R  VN
-% so e.g. no_VOC_pop_out(3,4,4) are people who are infected with UK resident variants, recovered from VOC and vaccinated with new vaccine
-% we want: 
-% # Proportion of population in each type
-% p_vac = 0.7
-% p_no_vac = 1- p_vac 
-% 
-% p_rec = 0.2 # % recovered from previous strains
-% p_sus = 1-p_rec # % never infected with any coronavirus
-% 
-% # Reduced susceptibility for each type based on infection/vaccine immunity
-% const_vec = np.array((1., sus_ur, sus_vu, sus_vr))
-% prop_vec = np.array((p_sus*p_no_vac, p_rec*p_no_vac, p_sus*p_vac, p_rec*p_vac))
-%%%%%%%% Q: this then calculates scale = const_vec*prop_vec but isn't used
-%%%%%%%% Q: do we care about p_vac and p_rec on their own or only const_vec
-%%%%%%%% and prop_vec?
+figure; plot(t,for_jupyter_outputs.I_UK)
+hold on; plot(t,for_jupyter_outputs.I_VOC)
 
 %% Write required outputs to file to be used by the Python program
 % Find the proportions in each group
-VOC_intro_pop = no_VOC_pop_out(:,:,:,VOC_introduction_date);
-N = sum(VOC_intro_pop,'all');
-prop_sus_no_vac = sum(VOC_intro_pop(1,:,1),'all')/N; % proportion not previously infected and not vaccinated
-prop_rec_no_vac = sum(VOC_intro_pop(2:4,:,1),'all')/N; % proportion previously infected and not vaccinated
-prop_sus_vacc = sum(VOC_intro_pop(1,:,2:3),'all')/N; % proportion not previously infected and vaccinated
-%%%%%%%% Q: which vaccination to use? Or work out a mixture?
-prop_rec_vacc= sum(VOC_intro_pop(2:4,:,2:3),'all')/N; % proportion previously infected and vaccinated
+VOC_intro_pop = for_jupyter_pop_out(:,:,:,VOC_introduction_date);
+
+% for vaccinated groups we add up AZ and Pfizer (having put the efficacies
+% to be the same)
+prop_sus_no_vac = sum(VOC_intro_pop(1,:,1),'all'); % proportion not previously infected and not vaccinated
+prop_rec_no_vac = sum(VOC_intro_pop(2:4,:,1),'all'); % proportion previously infected and not vaccinated
+prop_sus_vacc = sum(VOC_intro_pop(1,:,2:3),'all'); % proportion not previously infected and vaccinated
+prop_rec_vacc= sum(VOC_intro_pop(2:4,:,2:3),'all'); % proportion previously infected and vaccinated
 writematrix([prop_sus_no_vac,prop_rec_no_vac,prop_sus_vacc,prop_rec_vacc],'prop_vec_in.csv')
 
 % find the susceptibility of different groups
 sus_ur = parameters.s_VOC; % susceptibility of unvaccinated, previously-infected, against the new strain
-sus_vu = parameters.e_pVOC; % (or e_aVOC) susceptibility of vaccinated, not previously infected, against the new strain
+sus_vu = 1-parameters.e_pVOC; % (or e_aVOC) susceptibility of vaccinated, not previously infected, against the new strain
 sus_vr = min(sus_ur,sus_vu);
 writematrix([1,sus_ur, sus_vu, sus_vr],'const_vec_in.csv');
 
-% parameters.s_UK = 0; % susceptibility to UK variant for VOC recovereds
-% parameters.s_VOC = 0; % susceptibility to VOC variant for UK recovereds
-% 
-% parameters.e_aUK = (1-0.65); % proportion of susceptibility remaining after AZ vaccine (1 - efficacy of AZ vaccine for resident variants) 
-% parameters.e_pUK = (1-0.75); % proportion of susceptibility remaining after Pfizer vaccine (1 - efficacy of Pfizer vaccine for resident variants) 
-% parameters.e_nUK = (1-0.65); % proportion of susceptibility remaining after new vaccine (1 - efficacy of new vaccine for resident variants) 
-% 
-% parameters.e_aVOC_scaling = 1; % efficacy of AZ vaccine for VOC variant, proportional scaling of resident variants
-% parameters.e_pVOC_scaling = 1; % efficacy of Pfizer vaccine for VOC variant, proportional scaling of resident variants
-% parameters.e_nVOC_scaling = 1; % efficacy of new vaccine for VOC variant, proportional scaling of resident variants
-% 
-% 
-% % Get effective R for each variant
-% [~,ReffUK_no_VOC] = get_Reff(no_VOC_pop_out,no_VOC_parameters);
-% 
-% % Get infectious temporal profiles from outputs data
-% I_UK_no_VOC = no_VOC_outputs.I_UK;
-% 
-% % Get vaccination coverage data
-% vacc_coverage_data = squeeze(sum(no_VOC_pop_out(:,:,2:4,:),[1,2,3]))*100;
+%% Now we stop and run the Jupyter model in multitype_matlab_outputs.ipynb
+% to obtain Outputs_for_matlab/FPT_params_R....csv
+% Either put the path to your python distribution here and run directly
+% from matlab, or else go to the python script and run it there
+python_path = 'C:\Users\dysonl\anaconda3\';
+system([python_path,'python run_multitype_matlab_outputs.py'])
+
+%% and then come back here to use them
+params = readmatrix('Outputs_for_matlab/FPT_params_R=4.0.csv');
+
+% Rename the parameters for use in generating samples of the first passage time: growth rate
+growth_rate = params(1); 
+% Diffusion variance
+variance_all = params(2);
+% Scaling for eigenvector approximation
+evec_scaling = params(3);
+% First Passage Time to Z^* = upper_limit
+upper_limit = params(4);
+% beta for the VOC
+VOC_beta = params(5);
+
+time = 0:1:1000;
+cdf_chisq = zeros(length(time), 1);
+
+% Generate the cdf
+for T = 2:length(time)
+    cdf_chisq(T) = 1- integral(@(x) chisq(x, time(T), growth_rate, variance_all), eps, upper_limit);
+end
+
+first_passage_times = inverse_sampling(1000, cdf_chisq, time);
+
+% Then we also need the eigenvector so we know what states to start with
+% states = (unvac not-previously infected, unvac previously infected, vac not-prev, vac prev-inf)
+% evector is exposed states followed by infectious states
+evector = readmatrix('Outputs_for_matlab\dominant_eigenvector_R=4.0.csv');
+evector = evector/parameters.UK_popn_size; % not sure this is right
+evector = num2cell(evector);
+
+% parameters.VOC_imp_distribution should be in the form
+% (Resident variants, VOC, vaccination) = (S/R, E/I, U/A/P/N)
+VOC_imp_distribution = zeros(2,2,4); % for using an initial VOC prevalence distributed between classes
+S = 1; R = 2;
+E = 1; I = 2;
+not_vac = 1; vac = 2;
+% first four entries in the evector are for VOC exposed
+[VOC_imp_distribution(S,E,not_vac),VOC_imp_distribution(R,E,not_vac),VOC_imp_distribution(S,E,vac),VOC_imp_distribution(R,E,vac)] = evector{1:4};
+% and the second four are VOC infectious
+[VOC_imp_distribution(S,I,not_vac),VOC_imp_distribution(R,I,not_vac),VOC_imp_distribution(S,I,vac),VOC_imp_distribution(R,I,vac)] = evector{5:8};
+
+%%
+clear changed_parameters
+% changed_parameters.s_VOC = 1-0.4; % susceptibility to VOC variant for UK recovereds
+save_outputs = zeros(366,length(first_passage_times));
+changed_parameters.specify_distribution = true; % by default we don't use the distribution
+changed_parameters.VOC_imp_distribution = VOC_imp_distribution;
+changed_parameters.beta_VOC_changes = VOC_beta*ones(1,5);
+for i=1:length(first_passage_times)
+    changed_parameters.VOC_imp_date = datenum(2021,5,17)+VOC_introduction_date+first_passage_times(i);
+    changed_parameters.date1 = changed_parameters.VOC_imp_date;
+    parameters = make_parameters(changed_parameters);
+    parameters.e_aVOC = parameters.e_pVOC; % Make the vaccine efficacies the same, for simplicity
+    [~,~,~,VOCintro_outputs] = run_simple_vaccines_mex(parameters);
+    save_outputs(:,i) = VOCintro_outputs.I_VOC;
+    save_dates(:,i) = VOCintro_outputs.dates;
+end
+
+%%
+figure; plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_UK*for_jupyter_parameters.UK_popn_size)
+hold on
+plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_VOC*for_jupyter_parameters.UK_popn_size)
+plot(save_dates(:,1:100),save_outputs(:,1:100)*parameters.UK_popn_size)
+
+% PDF of non-central chi**2 with 0 degrees of freedom
+function chisq_pdf = chisq(x, t, growth_rate, variance_all)
+    
+   x_scale = 2.*growth_rate.*x./(((variance_all./2)).*(exp(growth_rate*t) - 1));
+   
+   lamb = 2*growth_rate*exp(growth_rate*t)./((variance_all./2)*(exp(growth_rate*t) - 1));
+   chisq_pdf = growth_rate./((variance_all./2).*(exp(growth_rate*t) - 1)) .* sqrt(exp(growth_rate*t)./x) .* exp(- 1./2 * (lamb + x_scale)) .* besseli(1, sqrt(x_scale*lamb)) ./ ((1-exp(-lamb./2)));
+end
+
+
+% Sample from approximate distribution given by chisq_pdf
+function sample = inverse_sampling(n, cdf, t)
+    runiform = unifrnd(0, 1, n);
+    sample = zeros(n, 1);
+    for i = 1:n
+        sample(i) = t(find(cdf>=runiform(i),1,'first'));
+    end
+    
+end

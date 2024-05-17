@@ -12,8 +12,8 @@ parameters.maxT = 365; % simulation time in days
 parameters.R0_UK = 4; 
 VOC_vs_UK = 1; % how much more infectious is VOC variant compared to UK?
 
-parameters.gam = 0.4; % recovery rate (I->R)
-parameters.alph = 0.3; % rate from E -> I
+parameters.gam = 1/4; %0.4; % recovery rate (I->R)
+parameters.alph = 1/3;%0.3; % rate from E -> I
 
 parameters.e_aUK = (1-0.65); % proportion of susceptibility remaining after AZ vaccine (1 - efficacy of AZ vaccine for resident variants) 
 parameters.e_pUK = (1-0.75); % proportion of susceptibility remaining after Pfizer vaccine (1 - efficacy of Pfizer vaccine for resident variants) 
@@ -26,7 +26,8 @@ parameters.e_nVOC_scaling = 1; % efficacy of new vaccine for VOC variant, propor
 parameters.s_UK = 0; % susceptibility to UK variant for VOC recovereds
 parameters.s_VOC = 0; % susceptibility to VOC variant for UK recovereds
 
-parameters.VOC_imp_size = 2000/56e6; % VOC variant prevlaence when introduced into the system
+parameters.UK_popn_size = 66e6;
+parameters.VOC_imp_size = 2000/parameters.UK_popn_size; % VOC variant prevlaence when introduced into the system
 parameters.VOC_imp_date = datenum(2021,5,17); % Date the VOC variant is introduced into the system
 parameters.VOC_imp_distribution = zeros(2,2,4); % for using an initial VOC prevalence distributed between classes
 parameters.specify_distribution = false; % by default we don't use the distribution
@@ -46,8 +47,9 @@ parameters.propn_transmission_priorinf = 1; % transmission blocking impact durin
                                      % another variant (proportion of transmission remaining)
 
 %% set how relaxation happens
-parameters.change_days = [datenum(2021,3,29)]; %[datenum(2021,3,29),datenum(2021,4,12),datenum(2021,5,17),datenum(2021,6,21)]-parameters.date1;
-parameters.R_changes_UK_without_immunity = 3.51; %[1.29,1.66,1.88,2.41,3.51];
+% this is adjusted so we don't have roadmap relaxations
+parameters.change_days = [datenum(2021,3,29),datenum(2021,4,12),datenum(2021,5,17),datenum(2021,6,21)]-parameters.date1;
+parameters.R_changes_UK_without_immunity = [1.29,1.66,1.88,2.41,3.51];
 parameters.beta_UK_changes = parameters.gam*parameters.R_changes_UK_without_immunity;
 parameters.beta_VOC_changes = parameters.gam*parameters.R_changes_UK_without_immunity*VOC_vs_UK;
 
@@ -67,7 +69,7 @@ end
 
 % From 17th May - 18th July (9 weeks), 2.7 million doses per week
 % Thereafter, 2.0 million doses per week
-assumed_weekly_vaccinations = [2.7e6*ones(1,9),2.0e6]/66e6; % vaccination rate at UK level
+assumed_weekly_vaccinations = [2.7e6*ones(1,9),2.0e6]/parameters.UK_popn_size ; % vaccination rate at UK level
 
 % Set vaccine mix
 AZ_ratio = 0.6;
@@ -109,7 +111,7 @@ if nargin>0
     for i=1:length(names)
         if strcmp(names{i},'VOC_vs_UK')==1
             parameters.beta_VOC_changes = parameters.beta_VOC_changes/VOC_vs_UK*changed_parameters.VOC_vs_UK;
-        else
+        elseif strcmp(names{i},'e_aVOC')==0 & strcmp(names{i},'e_pVOC')==0 & strcmp(names{i},'e_nVOC')==0
             eval(['parameters.',cell2mat(names(i)),' = changed_parameters.',cell2mat(names(i)),';']);
         end
     end
@@ -119,6 +121,19 @@ end
 parameters.e_aVOC = 1 - ((1-parameters.e_aUK)*parameters.e_aVOC_scaling); % efficacy of AZ vaccine for VOC variant, proportional scaling of resident variants
 parameters.e_pVOC = 1 - ((1-parameters.e_pUK)*parameters.e_pVOC_scaling); % efficacy of Pfizer vaccine for VOC variant (proportion of susceptibility remaining)
 parameters.e_nVOC = 1 - ((1-parameters.e_nUK)*parameters.e_nVOC_scaling); % efficacy of new vaccine for VOC variant (proportion of susceptibility remaining)
+
+%% and overwrite if any of the efficacies were given directly
+if nargin>0
+    if sum(strcmp(names,'e_aVOC'))
+        parameters.e_aVOC = changed_parameters.e_aVOC;
+    end
+    if sum(strcmp(names,'e_pVOC'))
+        parameters.e_pVOC = changed_parameters.e_pVOC;
+    end
+    if sum(strcmp(names,'e_nVOC'))
+        parameters.e_nVOC = changed_parameters.e_nVOC;
+    end
+end
 
 %% Error check paramter values
 
