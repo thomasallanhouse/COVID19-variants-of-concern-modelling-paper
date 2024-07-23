@@ -8,7 +8,7 @@
 clear
 
 %% Set global flag variables
-make_mex_flag = true;
+make_mex_flag = false;
 
 %% Make mex: run this the first time to make the mex file
 if make_mex_flag == true
@@ -69,7 +69,7 @@ python_path = 'C:\Users\dysonl\anaconda3\';
 system([python_path,'python run_multitype_matlab_outputs.py'])
 
 %% and then come back here to use them
-params = readmatrix('Outputs_for_matlab/FPT_params_R=4.0.csv');
+params = readmatrix('Outputs_for_matlab/FPT_params_beta=0.5.csv');
 
 % Rename the parameters for use in generating samples of the first passage time: growth rate
 growth_rate = params(1); 
@@ -95,8 +95,8 @@ first_passage_times = inverse_sampling(1000, cdf_chisq, time);
 % Then we also need the eigenvector so we know what states to start with
 % states = (unvac not-previously infected, unvac previously infected, vac not-prev, vac prev-inf)
 % evector is exposed states followed by infectious states
-evector = readmatrix('Outputs_for_matlab\dominant_eigenvector_R=4.0.csv');
-evector = evector/parameters.UK_popn_size; % not sure this is right
+evector = readmatrix('Outputs_for_matlab\dominant_eigenvector_beta=0.5.csv');
+evector = evector*upper_limit/parameters.UK_popn_size; 
 evector = num2cell(evector);
 
 % parameters.VOC_imp_distribution should be in the form
@@ -128,9 +128,9 @@ for i=1:length(first_passage_times)
 end
 
 %%
-figure; plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_UK*for_jupyter_parameters.UK_popn_size)
-hold on
-plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_VOC*for_jupyter_parameters.UK_popn_size)
+% figure; plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_UK*for_jupyter_parameters.UK_popn_size)
+% hold on
+% plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_VOC*for_jupyter_parameters.UK_popn_size)
 plot(save_dates(:,1:100),save_outputs(:,1:100)*parameters.UK_popn_size)
 
 % PDF of non-central chi**2 with 0 degrees of freedom

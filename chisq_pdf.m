@@ -22,8 +22,8 @@ cdf_chisq = zeros(length(time), 1);
 
 
 % Show comparison between samples and theoretical result
-for T = 1:1:1000
-    chi_sq_integral = integral(@(x) chisq(x, T, growth_rate, variance_all), eps, upper_limit);
+for T = 1:length(time)
+    chi_sq_integral = integral(@(x) chisq(x, time(T), growth_rate, variance_all), eps, upper_limit);
     prob =  (1-(chi_sq_integral));
     cdf_chisq(T) = prob;
 end

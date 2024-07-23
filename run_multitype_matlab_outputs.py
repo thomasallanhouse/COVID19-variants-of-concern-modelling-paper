@@ -15,8 +15,9 @@ from scipy.integrate import odeint
 # Parameters to change 
 # Change idx to change value of R from Reff_vec - or can choose a different value of R altogether by changing the value of RV
 idx = 4
-Reff_vec = np.array((2., 2.5, 3., 3.5, 4.))
-RV = Reff_vec[idx]
+#Reff_vec = np.array((2., 2.5, 3., 3.5, 4.))
+beta_vec = np.array((0.5,0.625,0.75,0.875,1.))
+#RV = Reff_vec[idx]
 
 ntypes = 8
 # Number of types-at-birth
@@ -25,12 +26,12 @@ nexposed = int(ntypes/2)
 
 # Disease Parameters
 
-gamma = 1/7 #0.4 # Recovery Rate
+gamma = 0.25 #0.4 # Recovery Rate
 sigma = 1/3 #0.3 # Progression rate from exposed to infectious
 
-beta_baseline = RV * gamma
+beta_baseline = beta_vec[idx]
 epsilon = 1e-3
-
+RV = beta_baseline/gamma
 
 # Relative susceptibility for different types 
 #sus_ur = 1-0.4 # Susceptibility of unvaccinated, previously infected against new strain
@@ -195,6 +196,8 @@ print(growth_rate)
 
 change_from_ebasis = -orth # P
 evec = change_from_ebasis[:, 0]
+if (evec<=0).all():
+    evec = np.abs(evec)
 change_to_ebasis = mt.invert_mat_safe(change_from_ebasis)
 xi = change_to_ebasis[:, 0]
 variance_diffusion_mat = np.zeros((ntypes, ntypes))
@@ -211,6 +214,6 @@ xvec_idx = np.min(np.where(xvec>=(evec_scaling*Zstar_min))[0])
 integral_limit = xvec[xvec_idx]
 
 ## Save growth rate, variance and scaling factor
-np.savetxt('./Outputs_for_matlab/FPT_params_R=' + str(RV) + '.csv', np.array((growth_rate, variance_all, evec_scaling, integral_limit,beta_baseline)))
-np.savetxt('./Outputs_for_matlab/dominant_eigenvector_R=' + str(RV) + '.csv', evec)
-np.savetxt('./Outputs_for_matlab/Jacobian_R=' + str(RV) + '.csv', pd.DataFrame(Omat))
+np.savetxt('./Outputs_for_matlab/FPT_params_beta=' + str(beta_baseline) + '.csv', np.array((growth_rate, variance_all, evec_scaling, integral_limit,beta_baseline)))
+np.savetxt('./Outputs_for_matlab/dominant_eigenvector_beta=' + str(beta_baseline) + '.csv', evec)
+np.savetxt('./Outputs_for_matlab/Jacobian_beta=' + str(beta_baseline) + '.csv', pd.DataFrame(Omat))
