@@ -14,7 +14,7 @@ from scipy.integrate import odeint
 
 # Parameters to change 
 # Change idx to change value of R from Reff_vec - or can choose a different value of R altogether by changing the value of RV
-idx = 4
+idx = 3
 #Reff_vec = np.array((2., 2.5, 3., 3.5, 4.))
 beta_vec = np.array((0.5,0.625,0.75,0.875,1.))
 #RV = Reff_vec[idx]
@@ -214,6 +214,6 @@ xvec_idx = np.min(np.where(xvec>=(evec_scaling*Zstar_min))[0])
 integral_limit = xvec[xvec_idx]
 
 ## Save growth rate, variance and scaling factor
-np.savetxt('./Outputs_for_matlab/FPT_params_beta=' + str(beta_baseline) + '.csv', np.array((growth_rate, variance_all, evec_scaling, integral_limit,beta_baseline)))
-np.savetxt('./Outputs_for_matlab/dominant_eigenvector_beta=' + str(beta_baseline) + '.csv', evec)
-np.savetxt('./Outputs_for_matlab/Jacobian_beta=' + str(beta_baseline) + '.csv', pd.DataFrame(Omat))
+np.savetxt('./Outputs_for_matlab/FPT_params_beta.csv', np.array((growth_rate, variance_all, evec_scaling, integral_limit,beta_baseline)))
+np.savetxt('./Outputs_for_matlab/dominant_eigenvector_beta.csv', evec)
+np.savetxt('./Outputs_for_matlab/Jacobian_beta.csv', pd.DataFrame(Omat))
