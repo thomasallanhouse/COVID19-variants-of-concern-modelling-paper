@@ -9,7 +9,7 @@ function parameters = make_parameters(changed_parameters)
 
 parameters.date1 = datenum(2021,5,17); % assumed start date
 parameters.maxT = 365; % simulation time in days
-if nargin>0
+if nargin>0 % needs to be changed here because it's used later on
     if sum(ismember(fieldnames(changed_parameters),'maxT'))>0
         parameters.maxT = changed_parameters.maxT;
     end

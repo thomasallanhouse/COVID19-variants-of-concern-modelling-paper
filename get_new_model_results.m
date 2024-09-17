@@ -15,6 +15,7 @@ if make_mex_flag == true
     %%
     clear changed_parameters
     changed_parameters.VOC_imp_size = 0;
+    changed_parameters.maxT = 500;
     parameters = make_parameters(changed_parameters);
     codegen run_simple_vaccines -args {parameters}
 end
@@ -39,14 +40,13 @@ changed_parameters.beta_VOC_changes = VOC_beta*ones(1,5);
 changed_parameters.maxT = 500;
 
 parameters = make_parameters(changed_parameters);
-% parameters.VOC_imp_size = 1/parameters.UK_popn_size;
-% parameters.e_aVOC = parameters.e_pVOC; % Make the vaccine efficacies the same, for simplicity
+
 % this gives the fully population output: for_jupyter_pop_out(UK,VOC,Vaccine)
 % so e.g. for_jupyter_outputs(3,4,4) are people who are infected with UK resident variants, recovered from VOC and vaccinated with new vaccine
 % it also saves the inputted parameters and for_jupyter_outputs for ease of plotting
 % don't use the mex version for this, because the mex version only runs
 % with maxT = 365
-[t,for_jupyter_pop_out,for_jupyter_parameters,for_jupyter_outputs] = run_simple_vaccines(parameters);
+[t,for_jupyter_pop_out,for_jupyter_parameters,for_jupyter_outputs] = run_simple_vaccines_mex(parameters);
 
 figure; plot(t,for_jupyter_outputs.I_UK)
 hold on; plot(t,for_jupyter_outputs.I_VOC)
@@ -123,16 +123,16 @@ not_vac = 1; vac = 2;
 %%
 clear changed_parameters
 % changed_parameters.s_VOC = 1-0.4; % susceptibility to VOC variant for UK recovereds
-save_outputs = zeros(366,length(first_passage_times));
+save_outputs = zeros(501,length(first_passage_times));
 changed_parameters.specify_distribution = true; % by default we don't use the distribution
 changed_parameters.VOC_imp_distribution = VOC_imp_distribution;
 changed_parameters.beta_VOC_changes = VOC_beta*ones(1,5);
 changed_parameters.s_VOC = 0.6; % susceptibility of unvaccinated, previously-infected, against the new strain
 changed_parameters.e_pVOC = 0.4; % (or e_aVOC) susceptibility of vaccinated, not previously infected, against the new strain
 changed_parameters.e_aVOC = 0.4;
+changed_parameters.maxT = 500;
 for i=1:length(first_passage_times)
     changed_parameters.VOC_imp_date = datenum(2021,5,17)+VOC_introduction_date+first_passage_times(i);
-    changed_parameters.date1 = changed_parameters.VOC_imp_date;
     parameters = make_parameters(changed_parameters);
     [~,~,~,VOCintro_outputs] = run_simple_vaccines_mex(parameters);
     save_outputs(:,i) = VOCintro_outputs.I_VOC;
@@ -149,7 +149,7 @@ p1 = plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_UK*for_jupyter_paramet
 legend([p1,p2(1),p3],'Deterministic','Hybrid realisations','Median hybrid')
 ylabel('Infections')
 xlabel('Time')
-exportgraphics(gca,'plot.pdf','ContentType','image')
+% exportgraphics(gca,'plot.pdf','ContentType','image')
 
 %% Functions
 % PDF of non-central chi**2 with 0 degrees of freedom
