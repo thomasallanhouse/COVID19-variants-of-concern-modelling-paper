@@ -167,7 +167,7 @@ def variance(t, y0, omega, Omega, params, return_vec = True):
             unitvec = np.zeros(ntypes)
             unitvec[i] = 1.
             vecvar_i =  np.kron(unitvec, np.kron(np.identity(ntypes), np.identity(ntypes))) @ vecvar
-            sum_vecvar_i += y0[i] * np.reshape(vecvar_i, (ntypes, ntypes)).transpose()
+            sum_vecvar_i += np.real_if_close(y0[i] * np.reshape(vecvar_i, (ntypes, ntypes)).transpose())
             unit_outer_prod = np.outer(unitvec, unitvec).flatten() # Stack columns for 'vec' operator
             vec_wi =  eta[i] * (Amat @ Dmat @ Amat_inv @ unit_outer_prod)
             

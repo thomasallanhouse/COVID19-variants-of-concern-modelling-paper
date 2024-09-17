@@ -1,6 +1,8 @@
 %% make_parameters.m
 % Function to construct parameter structure that is then passed into 
 % the main model simulation
+% We set default parameter values, that can be overwritten by anything that
+% is in the input variable "changed_parameters"
 %--------------------------------------------------------------------------
 
 function parameters = make_parameters(changed_parameters)

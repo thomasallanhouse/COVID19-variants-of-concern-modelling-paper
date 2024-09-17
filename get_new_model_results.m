@@ -20,6 +20,9 @@ if make_mex_flag == true
 end
 
 %% Run the model with a VOC introduction date after the resident wave has finished
+VOC_beta = 0.875;
+
+
 % to get the immunity profile for the Jupyter program, and then something
 % to compare to after that
 VOC_introduction_date = 200;
@@ -35,6 +38,7 @@ changed_parameters.e_aVOC = 0.4;
 changed_parameters.beta_VOC_changes = VOC_beta*ones(1,5);
 
 parameters = make_parameters(changed_parameters);
+parameters.maxT = datenum(2022,1,1) - parameters.date1;
 % parameters.e_aVOC = parameters.e_pVOC; % Make the vaccine efficacies the same, for simplicity
 % this gives the fully population output: for_jupyter_pop_out(UK,VOC,Vaccine)
 % so e.g. for_jupyter_outputs(3,4,4) are people who are infected with UK resident variants, recovered from VOC and vaccinated with new vaccine
@@ -61,6 +65,8 @@ sus_ur = parameters.s_VOC; % susceptibility of unvaccinated, previously-infected
 sus_vu = 1-parameters.e_pVOC; % (or e_aVOC) susceptibility of vaccinated, not previously infected, against the new strain
 sus_vr = min(sus_ur,sus_vu);
 writematrix([1,sus_ur, sus_vu, sus_vr],'const_vec_in.csv');
+
+writematrix(VOC_beta,'VOC_beta.csv')
 
 %% Now we stop and run the Jupyter model in multitype_matlab_outputs.ipynb
 % to obtain Outputs_for_matlab/FPT_params_R....csv
@@ -124,6 +130,7 @@ changed_parameters.e_aVOC = 0.4;
 for i=1:length(first_passage_times)
     changed_parameters.VOC_imp_date = datenum(2021,5,17)+VOC_introduction_date+first_passage_times(i);
     changed_parameters.date1 = changed_parameters.VOC_imp_date;
+    changed_parameters.maxT = datenum(2023,1,1) - changed_parameters.date1;
     parameters = make_parameters(changed_parameters);
     %parameters.e_aVOC = parameters.e_pVOC; % Make the vaccine efficacies the same, for simplicity
     [~,~,~,VOCintro_outputs] = run_simple_vaccines_mex(parameters);
@@ -132,11 +139,18 @@ for i=1:length(first_passage_times)
 end
 
 %%
-figure; plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_UK*for_jupyter_parameters.UK_popn_size)
-hold on
-plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_VOC*for_jupyter_parameters.UK_popn_size)
-plot(save_dates(:,1:100),save_outputs(:,1:100)*parameters.UK_popn_size)
+figure; hold on; box on
+to_plot = 1:300; %rand(1,1000)<0.3;
+p2 = plot(save_dates(:,to_plot),save_outputs(:,to_plot)*parameters.UK_popn_size,'Color',[0.6350 0.0780 0.1840,0.1]);
+p3 = plot(median(save_dates,2),save_outputs(:,1)*parameters.UK_popn_size,'Color',"#77AC30",'LineWidth',1);
+plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_VOC*for_jupyter_parameters.UK_popn_size,'Color',"#0072BD",'LineWidth',1);
+p1 = plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_UK*for_jupyter_parameters.UK_popn_size,'Color',"#0072BD",'LineWidth',1);
+legend([p1,p2(1),p3],'Deterministic','Hybrid realisations','Median hybrid')
+ylabel('Infections')
+xlabel('Time')
+exportgraphics(gca,'plot.pdf','ContentType','image')
 
+%% Functions
 % PDF of non-central chi**2 with 0 degrees of freedom
 function chisq_pdf = chisq(x, t, growth_rate, variance_all)
     

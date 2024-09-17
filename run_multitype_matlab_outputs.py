@@ -30,6 +30,7 @@ gamma = 0.25 #0.4 # Recovery Rate
 sigma = 1/3 #0.3 # Progression rate from exposed to infectious
 
 beta_baseline = beta_vec[idx]
+beta_baseline = np.squeeze(pd.read_csv('VOC_beta.csv',header=None).to_numpy())
 epsilon = 1e-3
 RV = beta_baseline/gamma
 
