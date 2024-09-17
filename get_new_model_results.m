@@ -33,17 +33,20 @@ changed_parameters.VOC_imp_date = datenum(2021,5,17)+VOC_introduction_date;
 changed_parameters.s_VOC = 0.6; % susceptibility of unvaccinated, previously-infected, against the new strain
 changed_parameters.e_pVOC = 0.4; % (or e_aVOC) susceptibility of vaccinated, not previously infected, against the new strain
 changed_parameters.e_aVOC = 0.4;
-% changed_parameters.VOC_imp_size = 2000/66000000;
+changed_parameters.VOC_imp_size = 1/66000000;
 % changed_parameters.e_pVOC_scaling = 0; % efficacy of Pfizer vaccine for VOC variant, proportional scaling of resident variants
 changed_parameters.beta_VOC_changes = VOC_beta*ones(1,5);
+changed_parameters.maxT = 500;
 
 parameters = make_parameters(changed_parameters);
-parameters.maxT = datenum(2022,1,1) - parameters.date1;
+% parameters.VOC_imp_size = 1/parameters.UK_popn_size;
 % parameters.e_aVOC = parameters.e_pVOC; % Make the vaccine efficacies the same, for simplicity
 % this gives the fully population output: for_jupyter_pop_out(UK,VOC,Vaccine)
 % so e.g. for_jupyter_outputs(3,4,4) are people who are infected with UK resident variants, recovered from VOC and vaccinated with new vaccine
 % it also saves the inputted parameters and for_jupyter_outputs for ease of plotting
-[t,for_jupyter_pop_out,for_jupyter_parameters,for_jupyter_outputs] = run_simple_vaccines_mex(parameters);
+% don't use the mex version for this, because the mex version only runs
+% with maxT = 365
+[t,for_jupyter_pop_out,for_jupyter_parameters,for_jupyter_outputs] = run_simple_vaccines(parameters);
 
 figure; plot(t,for_jupyter_outputs.I_UK)
 hold on; plot(t,for_jupyter_outputs.I_VOC)
@@ -130,9 +133,7 @@ changed_parameters.e_aVOC = 0.4;
 for i=1:length(first_passage_times)
     changed_parameters.VOC_imp_date = datenum(2021,5,17)+VOC_introduction_date+first_passage_times(i);
     changed_parameters.date1 = changed_parameters.VOC_imp_date;
-    changed_parameters.maxT = datenum(2023,1,1) - changed_parameters.date1;
     parameters = make_parameters(changed_parameters);
-    %parameters.e_aVOC = parameters.e_pVOC; % Make the vaccine efficacies the same, for simplicity
     [~,~,~,VOCintro_outputs] = run_simple_vaccines_mex(parameters);
     save_outputs(:,i) = VOCintro_outputs.I_VOC;
     save_dates(:,i) = VOCintro_outputs.dates;

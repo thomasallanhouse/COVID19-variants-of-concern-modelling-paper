@@ -9,6 +9,11 @@ function parameters = make_parameters(changed_parameters)
 
 parameters.date1 = datenum(2021,5,17); % assumed start date
 parameters.maxT = 365; % simulation time in days
+if nargin>0
+    if sum(ismember(fieldnames(changed_parameters),'maxT'))>0
+        parameters.maxT = changed_parameters.maxT;
+    end
+end
 
 % set parameter values
 parameters.R0_UK = 4; 
@@ -29,7 +34,7 @@ parameters.s_UK = 0; % susceptibility to UK variant for VOC recovereds
 parameters.s_VOC = 0; % susceptibility to VOC variant for UK recovereds
 
 parameters.UK_popn_size = 66e6;
-parameters.VOC_imp_size = 2000/parameters.UK_popn_size; % VOC variant prevlaence when introduced into the system
+parameters.VOC_imp_size = 2000/parameters.UK_popn_size; % VOC variant prevalence when introduced into the system
 parameters.VOC_imp_date = datenum(2021,5,17); % Date the VOC variant is introduced into the system
 parameters.VOC_imp_distribution = zeros(2,2,4); % for using an initial VOC prevalence distributed between classes
 parameters.specify_distribution = false; % by default we don't use the distribution
