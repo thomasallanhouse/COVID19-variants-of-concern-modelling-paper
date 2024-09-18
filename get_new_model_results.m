@@ -11,18 +11,18 @@ clear
 make_mex_flag = false;
 
 %% Make mex: run this the first time to make the mex file
+sim_time = 750;
 if make_mex_flag == true
     %%
     clear changed_parameters
     changed_parameters.VOC_imp_size = 0;
-    changed_parameters.maxT = 500;
+    changed_parameters.maxT = sim_time;
     parameters = make_parameters(changed_parameters);
     codegen run_simple_vaccines -args {parameters}
 end
 
 %% Run the model with a VOC introduction date after the resident wave has finished
 VOC_beta = 0.875;
-
 
 % to get the immunity profile for the Jupyter program, and then something
 % to compare to after that
@@ -37,7 +37,7 @@ changed_parameters.e_aVOC = 0.4;
 changed_parameters.VOC_imp_size = 1/66000000;
 % changed_parameters.e_pVOC_scaling = 0; % efficacy of Pfizer vaccine for VOC variant, proportional scaling of resident variants
 changed_parameters.beta_VOC_changes = VOC_beta*ones(1,5);
-changed_parameters.maxT = 500;
+changed_parameters.maxT = sim_time;
 
 parameters = make_parameters(changed_parameters);
 
@@ -123,27 +123,48 @@ not_vac = 1; vac = 2;
 %%
 clear changed_parameters
 % changed_parameters.s_VOC = 1-0.4; % susceptibility to VOC variant for UK recovereds
-save_outputs = zeros(501,length(first_passage_times));
+save_outputs = zeros(sim_time+1,length(first_passage_times));
 changed_parameters.specify_distribution = true; % by default we don't use the distribution
 changed_parameters.VOC_imp_distribution = VOC_imp_distribution;
 changed_parameters.beta_VOC_changes = VOC_beta*ones(1,5);
 changed_parameters.s_VOC = 0.6; % susceptibility of unvaccinated, previously-infected, against the new strain
 changed_parameters.e_pVOC = 0.4; % (or e_aVOC) susceptibility of vaccinated, not previously infected, against the new strain
 changed_parameters.e_aVOC = 0.4;
-changed_parameters.maxT = 500;
+changed_parameters.maxT = sim_time;
 for i=1:length(first_passage_times)
     changed_parameters.VOC_imp_date = datenum(2021,5,17)+VOC_introduction_date+first_passage_times(i);
     parameters = make_parameters(changed_parameters);
     [~,~,~,VOCintro_outputs] = run_simple_vaccines_mex(parameters);
     save_outputs(:,i) = VOCintro_outputs.I_VOC;
-    save_dates(:,i) = VOCintro_outputs.dates;
+    save_dates = VOCintro_outputs.dates;
+end
+
+%% calculate the time to peak and interpolate for horizontal statistics
+for i=1:length(first_passage_times)
+    peak_loc(i) = find(save_outputs(:,i)==max(save_outputs(:,i)));
+    start_loc(i) = find(save_outputs(:,i)>0,1,'first');
+    end_loc(i) = find(save_outputs(:,i)>0,1,'last');
+end
+time_to_peak = save_dates(peak_loc);
+
+npoints = 2000;
+nsims = length(first_passage_times);
+horz_points = linspace(0,max(save_outputs(:)),npoints+2);
+horz_points = horz_points(2:end-1);
+time_reached_up = NaT(npoints,nsims);
+time_reached_down = NaT(npoints,nsims);
+for i=1:nsims
+    time_reached_up(:,i) = interp1(save_outputs(start_loc(i):peak_loc(i),i),save_dates(start_loc(i):peak_loc(i)),horz_points);
+    time_reached_down(:,i) = interp1(save_outputs(peak_loc(i):end_loc(i),i),save_dates(peak_loc(i):end_loc(i)),horz_points);
 end
 
 %%
 figure; hold on; box on
 to_plot = 1:300; %rand(1,1000)<0.3;
-p2 = plot(save_dates(:,to_plot),save_outputs(:,to_plot)*parameters.UK_popn_size,'Color',[0.6350 0.0780 0.1840,0.1]);
-p3 = plot(median(save_dates,2),save_outputs(:,1)*parameters.UK_popn_size,'Color',"#77AC30",'LineWidth',1);
+p2 = plot(save_dates,save_outputs(:,to_plot)*parameters.UK_popn_size,'Color',[0.6350 0.0780 0.1840,0.1]);
+% p3 = plot(save_dates,median(save_outputs,2)*parameters.UK_popn_size,'Color',"#77AC30",'LineWidth',1);
+p3 = plot(median(time_reached_up,2,'omitmissing'),horz_points*parameters.UK_popn_size,'Color',"#77AC30",'LineWidth',1);
+plot(median(time_reached_down,2,'omitmissing'),horz_points*parameters.UK_popn_size,'Color',"#77AC30",'LineWidth',1);
 plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_VOC*for_jupyter_parameters.UK_popn_size,'Color',"#0072BD",'LineWidth',1);
 p1 = plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_UK*for_jupyter_parameters.UK_popn_size,'Color',"#0072BD",'LineWidth',1);
 legend([p1,p2(1),p3],'Deterministic','Hybrid realisations','Median hybrid')
