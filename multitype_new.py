@@ -69,17 +69,29 @@ def set_mean_odes(u, t, Omega):
     
 
 def variance(t, y0, omega, Omega, params, return_vec = True):
-    prop_vec, const_vec, beta_baseline, gamma = params
+    prop_vec, const_vec, sigma, beta_baseline, gamma = params
     eta = np.zeros(len(omega))
     ntypes = len(omega)
     time = t.copy()
+    scale = prop_vec*const_vec
 
-    
     nexposed = int(ntypes/2)
     
     
-    eigvls, orth = nla.eig(Omega)
-    print(eigvls)
+    eigvls, orth = nla.eig(Omega) 
+    if np.iscomplex(orth).any():
+        sym_params = [scale[0], scale[1], scale[2], scale[3], sigma, gamma, beta_baseline]
+        sym_labels = ['a', 'b', 'c', 'd', 's', 'g', 'beta']
+        sym_dict = dict([(l, p) for (l, p) in zip(*(sym_labels, sym_params))])
+        diag_sym = Omega_sym(0).diagonalize()
+        sym_eigvectors = diag_sym[0]
+        sym_eigvalues = diag_sym[1]
+        eigvls = np.diag(np.array(sym_eigvalues.subs(sym_dict)))
+        orth = np.array(sym_eigvectors.subs(sym_dict))
+    assert(not np.iscomplex(orth).any()), 'Jacobian has complex eigendecomposition'
+    eigvls = eigvls.astype('float32')
+    orth = orth.astype('float32')
+
     ordering = (np.argsort(eigvls)).tolist()
     eigvls, orth = reorder_evecs(eigvls, orth, ordering)
     diagmat = np.diag(eigvls)

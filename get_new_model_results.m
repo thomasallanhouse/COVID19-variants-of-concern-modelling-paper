@@ -6,17 +6,20 @@
 % put change_days and R_changes_UK_without_immunity to single values so we
 % don't have a relaxation roadmap
 clear
+%close all
 
 %% Set global flag variables
-make_mex_flag = false;
+make_mex_flag = true;
+
+%% Flag to run Python script - only needed once per value of VOC_beta
+run_python_script = false;
 
 %% Make mex: run this the first time to make the mex file
-sim_time = 750;
 if make_mex_flag == true
     %%
     clear changed_parameters
     changed_parameters.VOC_imp_size = 0;
-    changed_parameters.maxT = sim_time;
+    changed_parameters.maxT = 500;
     parameters = make_parameters(changed_parameters);
     codegen run_simple_vaccines -args {parameters}
 end
@@ -24,12 +27,14 @@ end
 %% Run the model with a VOC introduction date after the resident wave has finished
 VOC_beta = 0.875;
 
+
 % to get the immunity profile for the Jupyter program, and then something
 % to compare to after that
 VOC_introduction_date = 200;
 
 clear changed_parameters
 % changed_parameters.s_VOC = 0.6; % susceptibility to VOC variant for UK recovereds
+
 changed_parameters.VOC_imp_date = datenum(2021,5,17)+VOC_introduction_date;
 changed_parameters.s_VOC = 0.6; % susceptibility of unvaccinated, previously-infected, against the new strain
 changed_parameters.e_pVOC = 0.4; % (or e_aVOC) susceptibility of vaccinated, not previously infected, against the new strain
@@ -37,7 +42,7 @@ changed_parameters.e_aVOC = 0.4;
 changed_parameters.VOC_imp_size = 1/66000000;
 % changed_parameters.e_pVOC_scaling = 0; % efficacy of Pfizer vaccine for VOC variant, proportional scaling of resident variants
 changed_parameters.beta_VOC_changes = VOC_beta*ones(1,5);
-changed_parameters.maxT = sim_time;
+changed_parameters.maxT = 500;
 
 parameters = make_parameters(changed_parameters);
 
@@ -65,7 +70,7 @@ writematrix([prop_sus_no_vac,prop_rec_no_vac,prop_sus_vacc,prop_rec_vacc],'prop_
 
 % find the susceptibility of different groups
 sus_ur = parameters.s_VOC; % susceptibility of unvaccinated, previously-infected, against the new strain
-sus_vu = 1-parameters.e_pVOC; % (or e_aVOC) susceptibility of vaccinated, not previously infected, against the new strain
+sus_vu = parameters.e_pVOC; % (or e_aVOC) susceptibility of vaccinated, not previously infected, against the new strain
 sus_vr = min(sus_ur,sus_vu);
 writematrix([1,sus_ur, sus_vu, sus_vr],'const_vec_in.csv');
 
@@ -75,11 +80,13 @@ writematrix(VOC_beta,'VOC_beta.csv')
 % to obtain Outputs_for_matlab/FPT_params_R....csv
 % Either put the path to your python distribution here and run directly
 % from matlab, or else go to the python script and run it there
-python_path = 'C:\Users\dysonl\anaconda3\';
-system([python_path,'python run_multitype_matlab_outputs.py'])
+if run_python_script == 1
+    python_path = '/Users/jacobcurran-sebastian/miniconda3/bin/';
+    system([python_path,'python run_multitype_matlab_outputs.py'])
+end
 
 %% and then come back here to use them
-params = readmatrix('Outputs_for_matlab/FPT_params_beta.csv');
+params = readmatrix(append('Outputs_for_matlab/FPT_params_beta=',string(VOC_beta) ,'.csv'));
 
 % Rename the parameters for use in generating samples of the first passage time: growth rate
 growth_rate = params(1); 
@@ -105,8 +112,8 @@ first_passage_times = inverse_sampling(1000, cdf_chisq, time);
 % Then we also need the eigenvector so we know what states to start with
 % states = (unvac not-previously infected, unvac previously infected, vac not-prev, vac prev-inf)
 % evector is exposed states followed by infectious states
-evector = readmatrix('Outputs_for_matlab\dominant_eigenvector_beta.csv');
-evector = evector*upper_limit/parameters.UK_popn_size; 
+evector = readmatrix(append('Outputs_for_matlab/dominant_eigenvector_beta=',string(VOC_beta) ,'.csv'));
+evector = evector*upper_limit/(parameters.UK_popn_size * sum(evector)); 
 evector = num2cell(evector);
 
 % parameters.VOC_imp_distribution should be in the form
@@ -123,21 +130,24 @@ not_vac = 1; vac = 2;
 %%
 clear changed_parameters
 % changed_parameters.s_VOC = 1-0.4; % susceptibility to VOC variant for UK recovereds
-save_outputs = zeros(sim_time+1,length(first_passage_times));
+save_outputs = zeros(501,length(first_passage_times));
 changed_parameters.specify_distribution = true; % by default we don't use the distribution
 changed_parameters.VOC_imp_distribution = VOC_imp_distribution;
 changed_parameters.beta_VOC_changes = VOC_beta*ones(1,5);
 changed_parameters.s_VOC = 0.6; % susceptibility of unvaccinated, previously-infected, against the new strain
 changed_parameters.e_pVOC = 0.4; % (or e_aVOC) susceptibility of vaccinated, not previously infected, against the new strain
 changed_parameters.e_aVOC = 0.4;
-changed_parameters.maxT = sim_time;
+changed_parameters.maxT = 500;
+%changed_parameters.maxT = 366;
 for i=1:length(first_passage_times)
     changed_parameters.VOC_imp_date = datenum(2021,5,17)+VOC_introduction_date+first_passage_times(i);
     parameters = make_parameters(changed_parameters);
     [~,~,~,VOCintro_outputs] = run_simple_vaccines_mex(parameters);
     save_outputs(:,i) = VOCintro_outputs.I_VOC;
-    save_dates = VOCintro_outputs.dates;
+    save_dates(:,i) = VOCintro_outputs.dates;
 end
+out1 = for_jupyter_outputs.E_VOC;
+out2 = for_jupyter_outputs.I_VOC;
 
 %% calculate the time to peak and interpolate for horizontal statistics
 for i=1:length(first_passage_times)
@@ -158,18 +168,24 @@ for i=1:nsims
     time_reached_down(:,i) = interp1(save_outputs(peak_loc(i):end_loc(i),i),save_dates(peak_loc(i):end_loc(i)),horz_points);
 end
 
+
+
+
 %%
 figure; hold on; box on
-to_plot = 1:300; %rand(1,1000)<0.3;
-p2 = plot(save_dates,save_outputs(:,to_plot)*parameters.UK_popn_size,'Color',[0.6350 0.0780 0.1840,0.1]);
-% p3 = plot(save_dates,median(save_outputs,2)*parameters.UK_popn_size,'Color',"#77AC30",'LineWidth',1);
-p3 = plot(median(time_reached_up,2,'omitmissing'),horz_points*parameters.UK_popn_size,'Color',"#77AC30",'LineWidth',1);
-plot(median(time_reached_down,2,'omitmissing'),horz_points*parameters.UK_popn_size,'Color',"#77AC30",'LineWidth',1);
-plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_VOC*for_jupyter_parameters.UK_popn_size,'Color',"#0072BD",'LineWidth',1);
+to_plot = 1:500; %rand(1,1000)<0.3;
+p2 = plot(save_dates(:,to_plot),save_outputs(:,to_plot)*parameters.UK_popn_size,'Color',[0.6350 0.0780 0.1840,0.1]);
+%p3 = plot(median(save_dates,2),save_outputs(:,1)*parameters.UK_popn_size,'Color',"#77AC30",'LineWidth',2);
+p3 = plot(median(time_reached_up,2,'omitnan'),horz_points*parameters.UK_popn_size,'Color',"#77AC30",'LineWidth',1);
+plot(median(time_reached_down,2,'omitnan'),horz_points*parameters.UK_popn_size,'Color',"#77AC30",'LineWidth',1);
+plot(for_jupyter_outputs.dates,out2*for_jupyter_parameters.UK_popn_size,'Color',"#0072BD",'LineWidth',2);
+
 p1 = plot(for_jupyter_outputs.dates,for_jupyter_outputs.I_UK*for_jupyter_parameters.UK_popn_size,'Color',"#0072BD",'LineWidth',1);
 legend([p1,p2(1),p3],'Deterministic','Hybrid realisations','Median hybrid')
 ylabel('Infections')
 xlabel('Time')
+%xlim([datenum(2021,5,17), datenum(2024, 1, 1)])
+
 % exportgraphics(gca,'plot.pdf','ContentType','image')
 
 %% Functions

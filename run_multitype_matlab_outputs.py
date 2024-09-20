@@ -1,12 +1,10 @@
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from tqdm import tqdm
 import numpy.linalg as nla
-import seaborn as sns
 import scipy as sp
 import pandas as pd
 import sympy as sym
-from odeintw import odeintw
 import multitype_new as mt
 import importlib
 importlib.reload(mt)
@@ -14,10 +12,6 @@ from scipy.integrate import odeint
 
 # Parameters to change 
 # Change idx to change value of R from Reff_vec - or can choose a different value of R altogether by changing the value of RV
-idx = 3
-#Reff_vec = np.array((2., 2.5, 3., 3.5, 4.))
-beta_vec = np.array((0.5,0.625,0.75,0.875,1.))
-#RV = Reff_vec[idx]
 
 ntypes = 8
 # Number of types-at-birth
@@ -29,8 +23,10 @@ nexposed = int(ntypes/2)
 gamma = 0.25 #0.4 # Recovery Rate
 sigma = 1/3 #0.3 # Progression rate from exposed to infectious
 
-beta_baseline = beta_vec[idx]
 beta_baseline = np.squeeze(pd.read_csv('VOC_beta.csv',header=None).to_numpy())
+
+print('Running for beta = ' + str(beta_baseline))
+
 epsilon = 1e-3
 RV = beta_baseline/gamma
 
@@ -61,7 +57,7 @@ scale = const_vec*prop_vec
 
 # Vector of immigrants at each type - currently only 1 immigrant of type 1 (unvaccinated, no prior infection) every 5 days
 
-im = 1
+im = 0
 im_vec = np.zeros(ntypes)
 y0 = np.zeros(ntypes)
 y0[0] = 1
@@ -130,7 +126,14 @@ Mmat = odeint(mt.set_mean_odes, y0, time, args = (Omat,)).T
 # Total mean
 mean = np.sum(Mmat, axis=0)
 
-variance = mt.variance(time, y0, omega_vec, Omat, [prop_vec, const_vec, beta_baseline, gamma], eta)
+# print(y0, omega_vec)
+# print(pd.DataFrame(Omat))
+# print([prop_vec, const_vec, beta_baseline, gamma])
+# print(eta(10))
+
+
+variance = mt.variance(time, y0, omega_vec, Omat, [prop_vec, const_vec, sigma, 
+                                                   beta_baseline, gamma], eta)
 
 #Coefficient of variation
 sig_over_mean = (np.sqrt(variance)/(mean))
@@ -140,8 +143,30 @@ Tstar_idx, Tstar = mt.Tstar(time, q, sig_over_mean, thresh1 = epsilon, thresh2 =
 Zstar_min= mean[Tstar_idx]
 
 eigvls, orth = nla.eig(Omat)
-ordering = (np.argsort(eigvls)).tolist()
+
+if np.iscomplex(orth).any():
+
+# Maybe change this back
+    print('Numerical instability: Switching to symbolic compution of eigenvectors')
+    sym_params = [scale[0], scale[1], scale[2], scale[3], sigma, gamma, beta_baseline]
+    sym_labels = ['a', 'b', 'c', 'd', 's', 'g', 'beta']
+    sym_dict = dict([(l, p) for (l, p) in zip(*(sym_labels, sym_params))])
+    diag_sym = mt.Omega_sym(0).diagonalize()
+    sym_eigvectors = diag_sym[0]
+    sym_eigvalues = diag_sym[1]
+    eigvls = np.diag(np.array(sym_eigvalues.subs(sym_dict)))
+    orth = np.array(sym_eigvectors.subs(sym_dict))
+    for col in range(orth.shape[0]):
+        orth[:, col] /= np.sum(orth[:, col]**2)
+assert(not np.iscomplex(orth).any()), 'Jacobian has complex eigendecomposition'
+eigvls = eigvls.astype('float64')
+orth = orth.astype('float64')
+
+# Some issue with ordering in sympy vs numpy
+ordering = np.flip(np.argsort(eigvls)).tolist()
 eigvls, orth = mt.reorder_evecs(eigvls, orth, ordering)
+
+
 diagmat = np.diag(eigvls)
 growth_rate = np.max(eigvls)
 assert(growth_rate > 0), 'Growth Rate must be positive (i.e. Branching Process must be supercritical)'
@@ -190,11 +215,13 @@ for l in range(0, ntypes):
     Gmat[l, :, :] *= omega_vec[l]
 
 
-eigvls, orth = nla.eig(Omat)
 growth_rate = np.max(eigvls)
 print(growth_rate)
 
-
+#####
+##### You have changed the minus sign here!!!! Change back if things go wrong.
+##### Update: You have changed it back. If in doubt, it should have a minus sign in front
+#####
 change_from_ebasis = -orth # P
 evec = change_from_ebasis[:, 0]
 if (evec<=0).all():
@@ -215,6 +242,7 @@ xvec_idx = np.min(np.where(xvec>=(evec_scaling*Zstar_min))[0])
 integral_limit = xvec[xvec_idx]
 
 ## Save growth rate, variance and scaling factor
-np.savetxt('./Outputs_for_matlab/FPT_params_beta.csv', np.array((growth_rate, variance_all, evec_scaling, integral_limit,beta_baseline)))
-np.savetxt('./Outputs_for_matlab/dominant_eigenvector_beta.csv', evec)
-np.savetxt('./Outputs_for_matlab/Jacobian_beta.csv', pd.DataFrame(Omat))
+print('Zstar = ' + str(integral_limit))
+np.savetxt('./Outputs_for_matlab/FPT_params_beta='+str(beta_baseline)+'.csv', np.array((growth_rate, variance_all, evec_scaling, integral_limit,beta_baseline)))
+np.savetxt('./Outputs_for_matlab/dominant_eigenvector_beta='+str(beta_baseline)+'.csv', evec)
+np.savetxt('./Outputs_for_matlab/Jacobian_beta='+str(beta_baseline)+'.csv', pd.DataFrame(Omat))
